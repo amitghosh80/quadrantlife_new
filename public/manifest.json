@@ -1,0 +1,24 @@
+{
+  "name": "Quadrant Life",
+  "short_name": "Quadrant Life",
+  "description": "Intentional planning for a balanced, productive life using the Eisenhower Matrix",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#1e293b",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": [
+    "productivity",
+    "lifestyle"
+  ],
+  "screenshots": [],
+  "shortcuts": []
+}
