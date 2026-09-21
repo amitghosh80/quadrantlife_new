@@ -4,12 +4,13 @@ import Auth from './components/Auth';
 import EisenhowerMatrix from './components/EisenhowerMatrix';
 import { GoalManager } from './components/GoalManager';
 import { BalanceIndicator } from './components/BalanceIndicator';
+import { ResetPasswordModal } from './components/ResetPasswordModal';
 import { Target, LayoutGrid, TrendingUp } from 'lucide-react';
 
 type View = 'matrix' | 'goals' | 'balance';
 
 function App() {
-  const { user, loading } = useAuth();
+  const { user, loading, isPasswordRecovery, setIsPasswordRecovery } = useAuth();
   const [currentView, setCurrentView] = useState<View>('matrix');
 
   if (loading) {
@@ -21,17 +22,30 @@ function App() {
   }
 
   if (!user) {
-    return <Auth />;
+    return (
+      <>
+        <Auth />
+        <ResetPasswordModal
+          isOpen={isPasswordRecovery}
+          onClose={() => setIsPasswordRecovery(false)}
+        />
+      </>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 relative">
+      <ResetPasswordModal
+        isOpen={isPasswordRecovery}
+        onClose={() => setIsPasswordRecovery(false)}
+      />
+
       <header className="border-b bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex justify-center gap-1 py-3" aria-label="Main navigation">
             <button
               onClick={() => setCurrentView('matrix')}
-              className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium transition-all ${
+              className={`flex items-center gap-2 px-3 sm:px-6 py-2.5 rounded-lg font-medium transition-all ${
                 currentView === 'matrix'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-gray-600 hover:bg-gray-100'
@@ -39,11 +53,11 @@ function App() {
               aria-current={currentView === 'matrix' ? 'page' : undefined}
             >
               <LayoutGrid className="w-5 h-5" aria-hidden="true" />
-              Task Matrix
+              <span className="hidden sm:inline">Task Matrix</span>
             </button>
             <button
               onClick={() => setCurrentView('goals')}
-              className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium transition-all ${
+              className={`flex items-center gap-2 px-3 sm:px-6 py-2.5 rounded-lg font-medium transition-all ${
                 currentView === 'goals'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-gray-600 hover:bg-gray-100'
@@ -51,11 +65,11 @@ function App() {
               aria-current={currentView === 'goals' ? 'page' : undefined}
             >
               <Target className="w-5 h-5" aria-hidden="true" />
-              Goals
+              <span className="hidden sm:inline">Goals</span>
             </button>
             <button
               onClick={() => setCurrentView('balance')}
-              className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium transition-all ${
+              className={`flex items-center gap-2 px-3 sm:px-6 py-2.5 rounded-lg font-medium transition-all ${
                 currentView === 'balance'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-gray-600 hover:bg-gray-100'
@@ -63,7 +77,7 @@ function App() {
               aria-current={currentView === 'balance' ? 'page' : undefined}
             >
               <TrendingUp className="w-5 h-5" aria-hidden="true" />
-              Balance
+              <span className="hidden sm:inline">Balance</span>
             </button>
           </nav>
         </div>

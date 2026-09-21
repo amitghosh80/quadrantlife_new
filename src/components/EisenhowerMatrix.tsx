@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus, LogOut, Calendar, MessageCircle, ExternalLink } from 'lucide-react';
 import { supabase, Task } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -29,6 +29,8 @@ export default function EisenhowerMatrix() {
   const [returnToPlanningAfterTask, setReturnToPlanningAfterTask] = useState(false);
   const [showBalloons, setShowBalloons] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [activeQuadrantIndex, setActiveQuadrantIndex] = useState(0);
+  const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -357,17 +359,19 @@ export default function EisenhowerMatrix() {
             />
             <button
               onClick={() => setShowPlanningModal(true)}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex-shrink-0"
+              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex-shrink-0"
+              title="Quick Review"
             >
               <Calendar className="w-4 h-4" />
-              <span className="text-sm sm:text-base">Quick Review</span>
+              <span className="hidden sm:inline text-sm sm:text-base">Quick Review</span>
             </button>
             <button
               onClick={handleSignOut}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition flex-shrink-0"
+              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition flex-shrink-0"
+              title="Sign Out"
             >
               <LogOut className="w-4 h-4" />
-              <span className="text-sm sm:text-base">Sign Out</span>
+              <span className="hidden sm:inline text-sm sm:text-base">Sign Out</span>
             </button>
           </div>
         </div>
@@ -419,14 +423,50 @@ export default function EisenhowerMatrix() {
 
         <RecommendationsBar tasks={tasks} />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mt-6">
-          {quadrants.map((quadrant) => {
+        <div className="flex md:hidden items-center gap-2 mt-6 overflow-x-auto pb-1" role="tablist" aria-label="Select quadrant">
+          {quadrants.map((quadrant, index) => (
+            <button
+              key={`${quadrant.urgent}-${quadrant.important}`}
+              role="tab"
+              aria-selected={activeQuadrantIndex === index}
+              onClick={() => setActiveQuadrantIndex(index)}
+              className={`flex-1 min-w-[80px] px-2 py-2 rounded-lg text-xs font-semibold transition touch-manipulation ${
+                activeQuadrantIndex === index
+                  ? `${quadrant.headerColor} text-white shadow-sm`
+                  : 'bg-white text-gray-600 border border-gray-200'
+              }`}
+            >
+              {quadrant.title.split(' - ')[0]}
+            </button>
+          ))}
+        </div>
+
+        <div
+          className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mt-3 md:mt-6"
+          onTouchStart={(e) => {
+            touchStartX.current = e.touches[0].clientX;
+          }}
+          onTouchEnd={(e) => {
+            if (touchStartX.current === null) return;
+            const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+            const SWIPE_THRESHOLD = 50;
+            if (deltaX > SWIPE_THRESHOLD) {
+              setActiveQuadrantIndex((prev) => Math.max(prev - 1, 0));
+            } else if (deltaX < -SWIPE_THRESHOLD) {
+              setActiveQuadrantIndex((prev) => Math.min(prev + 1, quadrants.length - 1));
+            }
+            touchStartX.current = null;
+          }}
+        >
+          {quadrants.map((quadrant, index) => {
             const quadrantTasks = getTasksForQuadrant(quadrant.urgent, quadrant.important);
 
             return (
               <div
                 key={`${quadrant.urgent}-${quadrant.important}`}
-                className={`${quadrant.bgColor} ${quadrant.borderColor} border-2 rounded-xl overflow-hidden`}
+                className={`${quadrant.bgColor} ${quadrant.borderColor} border-2 rounded-xl overflow-hidden ${
+                  index === activeQuadrantIndex ? 'block' : 'hidden'
+                } md:block`}
               >
                 <div className={`${quadrant.headerColor} text-white p-3 sm:p-4`}>
                   <div className="flex items-center justify-between gap-2">

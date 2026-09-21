@@ -90,31 +90,31 @@ export default function TaskCard({ task, onDelete, onToggleComplete, onEdit, rol
             </div>
           )}
         </div>
-        <div className="flex gap-1 flex-shrink-0">
+        <div className="flex gap-1.5 sm:gap-1 flex-shrink-0">
           <button
             onClick={() => onToggleComplete(task.id, !task.completed)}
-            className={`p-1.5 rounded-lg transition touch-manipulation ${
+            className={`p-2.5 sm:p-1.5 min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 flex items-center justify-center rounded-lg transition touch-manipulation ${
               task.completed
                 ? 'bg-green-100 text-green-600 hover:bg-green-200 active:bg-green-300'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300'
             }`}
             title={task.completed ? 'Mark incomplete' : 'Mark complete'}
           >
-            <Check className="w-3.5 h-3.5" />
+            <Check className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
           </button>
           <button
             onClick={() => onEdit(task)}
-            className="p-1.5 bg-blue-100 text-blue-600 hover:bg-blue-200 active:bg-blue-300 rounded-lg transition touch-manipulation"
+            className="p-2.5 sm:p-1.5 min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 flex items-center justify-center bg-blue-100 text-blue-600 hover:bg-blue-200 active:bg-blue-300 rounded-lg transition touch-manipulation"
             title="Edit task"
           >
-            <Pencil className="w-3.5 h-3.5" />
+            <Pencil className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
           </button>
           <button
             onClick={() => onDelete(task.id)}
-            className="p-1.5 bg-red-100 text-red-600 hover:bg-red-200 active:bg-red-300 rounded-lg transition touch-manipulation"
+            className="p-2.5 sm:p-1.5 min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 flex items-center justify-center bg-red-100 text-red-600 hover:bg-red-200 active:bg-red-300 rounded-lg transition touch-manipulation"
             title="Delete task"
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
           </button>
         </div>
       </div>
