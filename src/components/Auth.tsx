@@ -1,7 +1,11 @@
 import { useState } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 import { supabase } from '../lib/supabase';
 import { Target, Users, TrendingUp, CheckSquare, Grid2x2 as Grid, Calendar, ArrowRight, Mail, ExternalLink } from 'lucide-react';
 import FeatureShowcase from './FeatureShowcase';
+
+const NATIVE_OAUTH_REDIRECT = 'com.quadrantlife.app://login-callback';
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(false);
@@ -45,13 +49,28 @@ export default function Auth() {
     setError(null);
 
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}`,
-        },
-      });
-      if (error) throw error;
+      if (Capacitor.isNativePlatform()) {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: NATIVE_OAUTH_REDIRECT,
+            skipBrowserRedirect: true,
+          },
+        });
+        if (error) throw error;
+        if (data?.url) {
+          await Browser.open({ url: data.url });
+        }
+        setLoading(false);
+      } else {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: `${window.location.origin}`,
+          },
+        });
+        if (error) throw error;
+      }
     } catch (err: any) {
       setError(err.message || 'An error occurred with Google sign-in');
       setLoading(false);
@@ -64,13 +83,21 @@ export default function Auth() {
     setError(null);
 
     try {
+      const redirectTo = Capacitor.isNativePlatform()
+        ? 'com.quadrantlife.app://reset-password'
+        : `${window.location.origin}`;
+
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-        redirectTo: `${window.location.origin}`,
+        redirectTo,
       });
       if (error) throw error;
       setResetSuccess(true);
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      if (err.message?.toLowerCase().includes('rate limit')) {
+        setError('A reset link was already sent recently. Please check your email inbox/spam folder, or wait 60 seconds before trying again.');
+      } else {
+        setError(err.message || 'An error occurred');
+      }
     } finally {
       setResetLoading(false);
     }

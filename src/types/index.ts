@@ -59,6 +59,22 @@ export interface UserPreferences {
   updated_at: string;
 }
 
+export interface DailyPlan {
+  id: string;
+  user_id: string;
+  plan_date: string;
+  created_at: string;
+}
+
+export interface DailyPlanTask {
+  id: string;
+  daily_plan_id: string;
+  task_id: string;
+  sort_order: number;
+  completed_at?: string | null;
+  created_at: string;
+}
+
 export interface TaskWithRelations extends Task {
   roles?: Role[];
   goals?: Goal[];

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, LogOut, Calendar, MessageCircle, ExternalLink } from 'lucide-react';
+import { Plus, LogOut, Calendar, MessageCircle, ExternalLink, Gem } from 'lucide-react';
 import { supabase, Task } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import TaskCard from './TaskCard';
@@ -12,6 +12,17 @@ import { WeeklyPlanningModal } from './WeeklyPlanningModal';
 import FeedbackModal from './FeedbackModal';
 import { loadTasksWithRelations, checkPlanningStatus, TaskWithRelations } from '../utils/taskHelpers';
 import { Balloons } from './Balloons';
+import TodayRocksBar from './TodayRocksBar';
+import BigRocksModal from './BigRocksModal';
+import {
+  loadTodayRocks,
+  hasDailyRocksToday,
+  shouldShowRocksPrompt,
+  dismissRocksPrompt,
+  updateRockCompletion,
+  removeTodayRock,
+  TodayRock,
+} from '../utils/dailyRocks';
 
 export default function EisenhowerMatrix() {
   const { user } = useAuth();
@@ -30,12 +41,19 @@ export default function EisenhowerMatrix() {
   const [showBalloons, setShowBalloons] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [activeQuadrantIndex, setActiveQuadrantIndex] = useState(0);
+  const [todayRocks, setTodayRocks] = useState<TodayRock[]>([]);
+  const [hasRocksToday, setHasRocksToday] = useState(false);
+  const [showRocksPrompt, setShowRocksPrompt] = useState(false);
+  const [isRocksModalOpen, setIsRocksModalOpen] = useState(false);
+  const [returnToRocksAfterTask, setReturnToRocksAfterTask] = useState(false);
   const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     if (user) {
       loadTasks();
       checkPlanning();
+      loadRocks();
+      checkRocksPrompt();
     }
   }, [user]);
 
@@ -47,6 +65,65 @@ export default function EisenhowerMatrix() {
       console.error('Error checking planning status:', error);
     }
   }
+
+  async function checkRocksPrompt() {
+    try {
+      const shouldPrompt = await shouldShowRocksPrompt();
+      setShowRocksPrompt(shouldPrompt);
+    } catch (error) {
+      console.error('Error checking rocks prompt:', error);
+    }
+  }
+
+  async function loadRocks() {
+    try {
+      const hasPlan = await hasDailyRocksToday();
+      setHasRocksToday(hasPlan);
+      const rocks = await loadTodayRocks();
+      setTodayRocks(rocks);
+    } catch (error) {
+      console.error('Error loading today\'s rocks:', error);
+    }
+  }
+
+  async function handleDismissRocksPrompt() {
+    try {
+      await dismissRocksPrompt();
+      setShowRocksPrompt(false);
+    } catch (error) {
+      console.error('Error dismissing rocks prompt:', error);
+    }
+  }
+
+  const openRocksModal = () => {
+    setShowRocksPrompt(false);
+    setIsRocksModalOpen(true);
+  };
+
+  const handleRocksModalComplete = () => {
+    setShowRocksPrompt(false);
+    loadRocks();
+  };
+
+  const handleRocksCreateTask = () => {
+    setIsRocksModalOpen(false);
+    setReturnToRocksAfterTask(true);
+    setSelectedQuadrant({ urgent: false, important: true });
+    setIsModalOpen(true);
+  };
+
+  const toggleRockComplete = async (rock: TodayRock, completed: boolean) => {
+    await toggleTaskComplete(rock.task_id, completed);
+  };
+
+  const handleRemoveRock = async (rock: TodayRock) => {
+    try {
+      await removeTodayRock(rock.id);
+      setTodayRocks(prev => prev.filter(r => r.id !== rock.id));
+    } catch (error) {
+      console.error('Error removing rock:', error);
+    }
+  };
 
   const loadTasks = async () => {
     try {
@@ -112,6 +189,11 @@ export default function EisenhowerMatrix() {
         setPlanningModalStep(2);
         setShowPlanningModal(true);
       }
+
+      if (returnToRocksAfterTask) {
+        setReturnToRocksAfterTask(false);
+        setIsRocksModalOpen(true);
+      }
     } catch (error) {
       console.error('Error adding task:', error);
       alert('Failed to create task. Please try again.');
@@ -156,6 +238,14 @@ export default function EisenhowerMatrix() {
       setTasks(tasks.map(task =>
         task.id === id ? { ...task, completed, completed_at: completed ? now : null } : task
       ));
+
+      const rock = todayRocks.find(r => r.task_id === id);
+      if (rock) {
+        await updateRockCompletion(rock.id, completed);
+        setTodayRocks(prev => prev.map(r =>
+          r.id === rock.id ? { ...r, completed_at: completed ? now : null } : r
+        ));
+      }
 
       if (completed) {
         setShowBalloons(true);
@@ -416,6 +506,51 @@ export default function EisenhowerMatrix() {
           </div>
         )}
 
+        {showRocksPrompt && (
+          <div className="mb-6 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg p-6 text-white">
+            <div className="flex items-start gap-4">
+              <Gem className="w-8 h-8 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="text-xl font-bold mb-2">Put the big rocks in first</h3>
+                <p className="text-indigo-100 leading-relaxed mb-4">
+                  Pick 1-3 important, not-urgent tasks to commit to today — before urgent noise fills the jar.{' '}
+                  <a
+                    href="https://www.franklincovey.com/habit-3/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-white hover:text-indigo-100 transition-colors underline"
+                  >
+                    <span className="text-sm">Learn about putting first things first</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={openRocksModal}
+                    className="px-4 py-2 bg-white text-indigo-700 font-medium rounded-lg hover:bg-indigo-50 transition"
+                  >
+                    Choose Your Rocks
+                  </button>
+                  <button
+                    onClick={handleDismissRocksPrompt}
+                    className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition border border-white"
+                  >
+                    Skip for Today
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <TodayRocksBar
+          rocks={todayRocks}
+          hasPlan={hasRocksToday}
+          onToggleComplete={toggleRockComplete}
+          onRemove={handleRemoveRock}
+          onEdit={() => setIsRocksModalOpen(true)}
+        />
+
         <NotificationBanner
           tasks={tasks}
           onTaskClick={openEditModal}
@@ -516,6 +651,13 @@ export default function EisenhowerMatrix() {
         onClose={() => setIsModalOpen(false)}
         onAdd={addTask}
         quadrant={selectedQuadrant}
+      />
+
+      <BigRocksModal
+        isOpen={isRocksModalOpen}
+        onClose={() => setIsRocksModalOpen(false)}
+        onComplete={handleRocksModalComplete}
+        onCreateTask={handleRocksCreateTask}
       />
 
       <EditTaskModal
