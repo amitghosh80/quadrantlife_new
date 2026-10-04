@@ -55,6 +55,11 @@ CREATE TABLE IF NOT EXISTS daily_plan_tasks (
   UNIQUE(daily_plan_id, task_id)
 );
 
+-- Ensure user_preferences exists before adding the dismissal column
+CREATE TABLE IF NOT EXISTS user_preferences (
+  user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE
+);
+
 ALTER TABLE user_preferences
   ADD COLUMN IF NOT EXISTS daily_rocks_dismissed_date date;
 

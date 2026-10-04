@@ -36,6 +36,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasRecoveryParams =
+      urlParams.get('type') === 'recovery' || (window.location.hash || '').includes('type=recovery');
+
+    if (hasRecoveryParams) {
+      setIsPasswordRecovery(true);
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('type');
+      cleanUrl.searchParams.delete('code');
+      window.history.replaceState({}, document.title, cleanUrl.toString());
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -56,7 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (url.startsWith('com.quadrantlife.app://login-callback') || url.startsWith('com.quadrantlife.app://reset-password')) {
           try {
             await Browser.close();
-          } catch (e) {
+          } catch {
             // In-app browser might already be closed
           }
 
